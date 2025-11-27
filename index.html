@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>香港新聞多台聯播監控系統</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121212; /* 深色背景 */
+            color: #ffffff;
+            font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+        }
+
+        header {
+            padding: 10px 20px;
+            background-color: #1f1f1f;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #e0e0e0;
+        }
+
+        .tips {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        /* 網格佈局設定 */
+        .grid-container {
+            display: grid;
+            /* 自動適應寬度，每格最小 400px，電腦通常顯示 2x2 或 3x3 */
+            grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); 
+            gap: 10px;
+            padding: 10px;
+            height: calc(100vh - 60px); /* 扣除標題高度 */
+        }
+
+        .news-card {
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            /* 保持 16:9 比例 */
+            aspect-ratio: 16 / 9; 
+            border: 1px solid #333;
+        }
+
+        .news-card iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* 手機版調整 */
+        @media (max-width: 600px) {
+            .grid-container {
+                grid-template-columns: 1fr; /* 手機變成單欄 */
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>香港新聞直播監控台 (HK News Multi-View)</h1>
+    <span class="tips">提示：預設為靜音，請點擊影片開啟聲音。若畫面黑屏，代表該台直播連結已更換。</span>
+</header>
+
+<div class="grid-container" id="video-grid">
+    </div>
+
+<script>
+    // ==========================================
+    // 【設定區】在此更新 YouTube 直播 ID
+    // 如果某個台看不了，請去 YouTube 找該台最新的直播網址
+    // 取網址 "v=" 後面的代碼，例如: watch?v=oxpQf6r8-c8 -> ID 就是 oxpQf6r8-c8
+    // ==========================================
+    const channels = [
+        {
+            name: "RTHK 32 (港台)",
+            id: "oxpQf6r8-c8" // 這是 RTHK 32 常用的直播 ID
+        },
+        {
+            name: "Now News (Now 新聞)",
+            id: "6gaRj3w-oZM" // Now 新聞直播 ID
+        },
+        {
+            name: "Cable News (有線新聞)",
+            id: "wT73hB1j8Kk" // 有線新聞直播 ID
+        },
+        {
+            name: "TVB News (無綫新聞)",
+            id: "P1c0lS8u6sE" // 無綫新聞直播 ID
+        },
+         {
+            name: "Commercial Radio (商台)",
+            id: "QtOq7rS5zZc" // 備用：商台或 RFA 等其他頻道
+        }
+    ];
+
+    // ==========================================
+    // 程式邏輯 (不需要修改)
+    // ==========================================
+    const grid = document.getElementById('video-grid');
+
+    channels.forEach(channel => {
+        const card = document.createElement('div');
+        card.className = 'news-card';
+        
+        // 組合 YouTube Embed 連結
+        // autoplay=1: 自動播放
+        // mute=1: 靜音 (瀏覽器政策規定自動播放通常必須靜音)
+        // controls=1: 顯示控制列
+        const embedUrl = `https://www.youtube.com/embed/${channel.id}?autoplay=1&mute=1&controls=1&playsinline=1`;
+
+        card.innerHTML = `
+            <iframe 
+                src="${embedUrl}" 
+                title="${channel.name}" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen>
+            </iframe>
+        `;
+        grid.appendChild(card);
+    });
+</script>
+
+</body>
+</html>
