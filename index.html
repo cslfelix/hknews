@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HK News 自定義監控台</title>
+    <title>自訂直播監控 (HK01/TVB/ANN/Chill)</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -18,115 +18,141 @@
             padding: 0;
             background-color: var(--bg-color);
             color: var(--text-color);
-            font-family: "Microsoft JhengHei", sans-serif;
-            overflow: hidden; /* 防止雙重滾動條 */
+            font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
         /* 頂部導航列 */
         header {
-            height: 50px;
-            padding: 0 20px;
+            flex: 0 0 50px;
+            padding: 0 15px;
             background-color: #1f1f1f;
             border-bottom: 1px solid #333;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            z-index: 10;
         }
 
-        h1 { margin: 0; font-size: 1.1rem; }
+        h1 { margin: 0; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
         button {
             cursor: pointer;
             padding: 6px 12px;
             border: none;
             border-radius: 4px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .btn-setting {
             background-color: var(--accent-color);
             color: white;
+            white-space: nowrap;
         }
 
-        /* 網格佈局 */
+        /* --- 核心佈局 --- */
         .grid-container {
+            flex: 1;
             display: grid;
-            padding: 5px;
-            gap: 5px;
-            height: calc(100vh - 55px);
+            padding: 10px;
+            gap: 10px;
             box-sizing: border-box;
-            /* 預設是自動填滿，我們可以透過 JS 動態修改這個屬性 */
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            grid-auto-rows: 1fr;
+            overflow-y: auto;
+            
+            /* 電腦版預設: 強制 2 欄 (2x2) */
+            grid-template-columns: repeat(2, 1fr); 
+            grid-auto-rows: min-content; 
+            align-content: start;
         }
 
         .news-card {
             background: var(--card-bg);
             border: 1px solid #333;
+            border-radius: 6px;
             position: relative;
             width: 100%;
-            height: 100%;
+            /* 強制 16:9 */
+            aspect-ratio: 16 / 9;
             overflow: hidden;
         }
 
         .news-card iframe {
-            width: 100%;
-            height: 100%;
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             border: none;
         }
 
         .empty-state {
+            grid-column: 1 / -1;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100%;
+            height: 200px;
             color: #666;
-            grid-column: 1 / -1;
         }
 
-        /* 設定面板 (Modal) */
+        /* --- 手機版適應 --- */
+        @media (max-width: 768px) {
+            .grid-container {
+                /* 手機強制 1 欄 */
+                grid-template-columns: 1fr !important;
+                padding: 5px;
+                gap: 8px;
+            }
+            header { padding: 0 10px; }
+        }
+
+        /* --- 設定面板 --- */
         .modal-overlay {
-            display: none; /* 預設隱藏 */
+            display: none;
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.85);
             z-index: 999;
             justify-content: center;
             align-items: center;
+            backdrop-filter: blur(2px);
         }
 
         .modal-content {
             background: #2d2d2d;
             padding: 20px;
-            border-radius: 8px;
+            border-radius: 12px;
             width: 90%;
-            max-width: 600px;
-            max-height: 80vh;
+            max-width: 500px;
+            max-height: 85vh;
             overflow-y: auto;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
 
         .modal-header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 15px;
+            align-items: center;
+            margin-bottom: 20px;
             border-bottom: 1px solid #444;
             padding-bottom: 10px;
         }
+        
+        .modal-header h2 { margin: 0; font-size: 1.2rem; }
 
         .channel-row {
             display: flex;
-            gap: 5px;
+            gap: 8px;
             margin-bottom: 10px;
         }
 
         .channel-row input {
-            padding: 8px;
+            padding: 10px;
             background: #444;
             border: 1px solid #555;
             color: white;
-            border-radius: 4px;
+            border-radius: 6px;
+            font-size: 14px;
         }
 
         .input-name { width: 30%; }
@@ -136,6 +162,7 @@
             background-color: var(--danger-color);
             color: white;
             width: 40px;
+            display: flex; align-items: center; justify-content: center;
         }
 
         .modal-footer {
@@ -147,27 +174,25 @@
             padding-top: 15px;
         }
 
-        .btn-add { background-color: #4CAF50; color: white; margin-bottom: 15px; width: 100%; padding: 10px;}
+        .btn-add { background-color: #4CAF50; color: white; width: 100%; padding: 12px; font-weight: bold;}
         .btn-save { background-color: var(--accent-color); color: white; }
         .btn-cancel { background-color: #666; color: white; }
         
-        /* 佈局控制 */
         .layout-controls {
-            margin-bottom: 15px;
-            padding: 10px;
-            background: #333;
-            border-radius: 4px;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: #383838;
+            border-radius: 6px;
         }
-        .layout-controls label { margin-right: 10px; }
-        .layout-controls select { padding: 5px; background: #555; color: white; border: none;}
-
+        .layout-controls label { font-size: 0.9rem; color: #ccc; display: block; margin-bottom: 5px; }
+        .layout-controls select { width: 100%; padding: 8px; background: #555; color: white; border: none; border-radius: 4px; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>📺 新聞監控台 Web App</h1>
-    <button class="btn-setting" onclick="openSettings()">⚙️ 設定連結與排版</button>
+    <h1>📺 直播監控 (HK01/TVB/ANN/Chill)</h1>
+    <button class="btn-setting" onclick="openSettings()">⚙️ 設定</button>
 </header>
 
 <div class="grid-container" id="video-grid">
@@ -176,96 +201,95 @@
 <div class="modal-overlay" id="settingsModal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>設定頻道與佈局</h2>
-            <button class="btn-cancel" onclick="closeSettings()" style="background:transparent; font-size:1.5rem;">&times;</button>
+            <h2>設定頻道</h2>
+            <button class="btn-cancel" onclick="closeSettings()" style="background:transparent; font-size:1.5rem; padding:0;">&times;</button>
         </div>
 
         <div class="layout-controls">
-            <label>每行顯示視窗數 (電腦版):</label>
+            <label>電腦版排列 (手機自動單欄):</label>
             <select id="columnSelect">
-                <option value="auto">自動適應 (Auto)</option>
-                <option value="1">1 個視窗</option>
-                <option value="2">2 個視窗</option>
-                <option value="3">3 個視窗</option>
-                <option value="4">4 個視窗</option>
+                <option value="2">每行 2 格 (推薦 4 台用)</option>
+                <option value="3">每行 3 格</option>
+                <option value="4">每行 4 格</option>
+                <option value="1">單欄顯示</option>
             </select>
         </div>
 
-        <div id="channels-list">
-            </div>
+        <div id="channels-list"></div>
 
-        <button class="btn-add" onclick="addEmptyRow()">+ 新增一個頻道</button>
+        <button class="btn-add" onclick="addEmptyRow()">+ 新增頻道</button>
 
         <div class="modal-footer">
             <button class="btn-cancel" onclick="closeSettings()">取消</button>
-            <button class="btn-save" onclick="saveAndRender()">儲存並更新</button>
+            <button class="btn-save" onclick="saveAndRender()">儲存</button>
         </div>
         
-        <p style="font-size:0.8rem; color:#888; margin-top:10px;">
-            提示：只要貼上 YouTube 影片網址即可 (如 https://www.youtube.com/watch?v=oxpQf6r8-c8)。<br>
-            設定會自動儲存在這台瀏覽器中。
+        <p style="font-size:0.75rem; color:#999; margin-top:15px; text-align: center;">
+            直接貼上 YouTube 網址即可
         </p>
     </div>
 </div>
 
 <script>
-    // 預設頻道 (如果使用者第一次來，沒存檔過)
+    // ==========================================
+    // 已更新為指定的 Default Link
+    // ==========================================
     const defaultChannels = [
-        { name: "RTHK 32", url: "https://www.youtube.com/watch?v=oxpQf6r8-c8" },
-        { name: "Now 新聞", url: "https://www.youtube.com/watch?v=6gaRj3w-oZM" },
-        { name: "有線新聞", url: "https://www.youtube.com/watch?v=wT73hB1j8Kk" },
-        { name: "無綫新聞", url: "https://www.youtube.com/watch?v=P1c0lS8u6sE" }
+        { name: "HK01", url: "https://www.youtube.com/watch?v=vUe4jpaVGcI" },
+        { name: "TVB", url: "https://www.youtube.com/watch?v=Kbq3BbE-1i0" },
+        { name: "JP-ANN", url: "https://www.youtube.com/watch?v=YSIBPQHgybM" },
+        { name: "YTChill靈異", url: "https://www.youtube.com/watch?v=iPlJj9Dl9pQ" }
     ];
 
     let myChannels = [];
-    let gridColumns = "auto";
+    let gridColumns = "2"; 
+    // 使用 v3 確保舊的設定被覆蓋，載入新的預設值
+    const STORAGE_KEY_CHANNELS = 'hkNewsChannels_v3';
+    const STORAGE_KEY_LAYOUT = 'hkNewsLayout_v3';
 
-    // 初始化
     window.onload = function() {
         loadSettings();
         renderGrid();
     };
 
-    // 讀取設定 (從 LocalStorage)
     function loadSettings() {
-        const saved = localStorage.getItem('hkNewsChannels');
-        const savedLayout = localStorage.getItem('hkNewsLayout');
+        const saved = localStorage.getItem(STORAGE_KEY_CHANNELS);
+        const savedLayout = localStorage.getItem(STORAGE_KEY_LAYOUT);
 
         if (saved) {
             myChannels = JSON.parse(saved);
         } else {
-            myChannels = JSON.parse(JSON.stringify(defaultChannels)); // Deep copy
+            // 如果沒有 v3 的紀錄，直接載入新的 Default
+            myChannels = JSON.parse(JSON.stringify(defaultChannels));
         }
 
         if (savedLayout) {
             gridColumns = savedLayout;
-            document.getElementById('columnSelect').value = gridColumns;
         }
+        document.getElementById('columnSelect').value = gridColumns;
     }
 
-    // 解析 YouTube ID
     function getYoutubeId(url) {
         if (!url) return null;
-        // 支援多種 YouTube 網址格式
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
         const match = url.match(regExp);
         return (match && match[2].length === 11) ? match[2] : null;
     }
 
-    // 渲染主畫面
     function renderGrid() {
         const grid = document.getElementById('video-grid');
         grid.innerHTML = '';
+        
+        const isMobile = window.innerWidth <= 768;
 
-        // 設定 grid columns
-        if (gridColumns === 'auto') {
-            grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(320px, 1fr))';
-        } else {
+        if (!isMobile) {
             grid.style.gridTemplateColumns = `repeat(${gridColumns}, 1fr)`;
+        } else {
+            grid.style.gridTemplateColumns = '';
         }
 
         if (myChannels.length === 0) {
-            grid.innerHTML = '<div class="empty-state">目前沒有設定任何頻道，請點擊右上角「設定」新增。</div>';
+            grid.innerHTML = '<div class="empty-state">暫無頻道，請按「設定」新增。</div>';
             return;
         }
 
@@ -278,7 +302,7 @@
                     <iframe 
                         src="https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&controls=1&playsinline=1" 
                         title="${ch.name}" 
-                        allow="autoplay; encrypted-media; picture-in-picture" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                         allowfullscreen>
                     </iframe>
                 `;
@@ -287,31 +311,26 @@
         });
     }
 
-    // 打開設定面板
+    window.addEventListener('resize', renderGrid);
+
     function openSettings() {
         const listDiv = document.getElementById('channels-list');
         listDiv.innerHTML = '';
-
-        myChannels.forEach((ch, index) => {
-            addSettingRow(ch.name, ch.url);
-        });
-
+        myChannels.forEach((ch) => addSettingRow(ch.name, ch.url));
         document.getElementById('settingsModal').style.display = 'flex';
     }
 
-    // 關閉設定面板
     function closeSettings() {
         document.getElementById('settingsModal').style.display = 'none';
     }
 
-    // 在設定面板增加一行輸入框
     function addSettingRow(name = '', url = '') {
         const listDiv = document.getElementById('channels-list');
         const row = document.createElement('div');
         row.className = 'channel-row';
         row.innerHTML = `
-            <input type="text" class="input-name" placeholder="頻道名稱" value="${name}">
-            <input type="text" class="input-url" placeholder="YouTube 網址" value="${url}">
+            <input type="text" class="input-name" placeholder="名稱" value="${name}">
+            <input type="text" class="input-url" placeholder="連結" value="${url}">
             <button class="btn-remove" onclick="this.parentElement.remove()">🗑</button>
         `;
         listDiv.appendChild(row);
@@ -319,12 +338,10 @@
 
     function addEmptyRow() {
         addSettingRow();
-        // 自動滾動到底部
         const listDiv = document.getElementById('channels-list');
         listDiv.scrollTop = listDiv.scrollHeight;
     }
 
-    // 儲存邏輯
     function saveAndRender() {
         const rows = document.querySelectorAll('#channels-list .channel-row');
         const newChannels = [];
@@ -332,17 +349,14 @@
         rows.forEach(row => {
             const name = row.querySelector('.input-name').value.trim();
             const url = row.querySelector('.input-url').value.trim();
-            if (url) {
-                newChannels.push({ name: name || '未命名頻道', url: url });
-            }
+            if (url) newChannels.push({ name: name || '頻道', url: url });
         });
 
         myChannels = newChannels;
         gridColumns = document.getElementById('columnSelect').value;
 
-        // 存入 LocalStorage
-        localStorage.setItem('hkNewsChannels', JSON.stringify(myChannels));
-        localStorage.setItem('hkNewsLayout', gridColumns);
+        localStorage.setItem(STORAGE_KEY_CHANNELS, JSON.stringify(myChannels));
+        localStorage.setItem(STORAGE_KEY_LAYOUT, gridColumns);
 
         renderGrid();
         closeSettings();
