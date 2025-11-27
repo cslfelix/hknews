@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>自訂直播監控 - HKNEWS</title>
+    <title>直播監控 (HOY/TVB/ANN/廢墟)</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -11,6 +11,7 @@
             --text-color: #fff;
             --accent-color: #2196F3;
             --danger-color: #f44336;
+            --warning-color: #ff9800;
         }
 
         body {
@@ -24,7 +25,6 @@
             flex-direction: column;
         }
 
-        /* 頂部導航列 */
         header {
             flex: 0 0 50px;
             padding: 0 15px;
@@ -44,7 +44,9 @@
             border: none;
             border-radius: 4px;
             font-size: 0.85rem;
+            transition: opacity 0.2s;
         }
+        button:hover { opacity: 0.9; }
 
         .btn-setting {
             background-color: var(--accent-color);
@@ -60,8 +62,7 @@
             gap: 10px;
             box-sizing: border-box;
             overflow-y: auto;
-            
-            /* 電腦版預設: 強制 2 欄 (2x2) */
+            /* 電腦版預設: 強制 2 欄 */
             grid-template-columns: repeat(2, 1fr); 
             grid-auto-rows: min-content; 
             align-content: start;
@@ -73,7 +74,6 @@
             border-radius: 6px;
             position: relative;
             width: 100%;
-            /* 強制 16:9 */
             aspect-ratio: 16 / 9;
             overflow: hidden;
         }
@@ -97,7 +97,6 @@
         /* --- 手機版適應 --- */
         @media (max-width: 768px) {
             .grid-container {
-                /* 手機強制 1 欄 */
                 grid-template-columns: 1fr !important;
                 padding: 5px;
                 gap: 8px;
@@ -168,16 +167,23 @@
         .modal-footer {
             margin-top: 20px;
             display: flex;
-            justify-content: flex-end;
-            gap: 10px;
+            justify-content: space-between; /* 讓按鈕分開兩邊 */
+            align-items: center;
             border-top: 1px solid #444;
             padding-top: 15px;
         }
 
-        .btn-add { background-color: #4CAF50; color: white; width: 100%; padding: 12px; font-weight: bold;}
+        .footer-right {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-add { background-color: #4CAF50; color: white; width: 100%; padding: 12px; font-weight: bold; margin-bottom: 10px;}
         .btn-save { background-color: var(--accent-color); color: white; }
         .btn-cancel { background-color: #666; color: white; }
-        
+        .btn-reset { background-color: transparent; border: 1px solid var(--warning-color); color: var(--warning-color); }
+        .btn-reset:hover { background-color: var(--warning-color); color: #000; }
+
         .layout-controls {
             margin-bottom: 20px;
             padding: 12px;
@@ -191,7 +197,7 @@
 <body>
 
 <header>
-    <h1>📺 自訂直播監控 (HOYTV錄播/TVB/ANN/Youtube) - Update 1128-0155HKT 👉右邊可自行修改直播內容</h1>
+    <h1>📺 直播監控 (HOY/TVB/ANN/廢墟)</h1>
     <button class="btn-setting" onclick="openSettings()">⚙️ 設定</button>
 </header>
 
@@ -220,8 +226,12 @@
         <button class="btn-add" onclick="addEmptyRow()">+ 新增頻道</button>
 
         <div class="modal-footer">
-            <button class="btn-cancel" onclick="closeSettings()">取消</button>
-            <button class="btn-save" onclick="saveAndRender()">儲存</button>
+            <button class="btn-reset" onclick="restoreDefaults()">↺ 恢復預設頻道</button>
+            
+            <div class="footer-right">
+                <button class="btn-cancel" onclick="closeSettings()">取消</button>
+                <button class="btn-save" onclick="saveAndRender()">儲存</button>
+            </div>
         </div>
         
         <p style="font-size:0.75rem; color:#999; margin-top:15px; text-align: center;">
@@ -232,7 +242,7 @@
 
 <script>
     // ==========================================
-    // 已更新為指定的 Default Link
+    // 你的新預設連結
     // ==========================================
     const defaultChannels = [
         { name: "HOYTV", url: "https://www.youtube.com/watch?v=6_E98HAqCj0" },
@@ -243,9 +253,9 @@
 
     let myChannels = [];
     let gridColumns = "2"; 
-    // 使用 v3 確保舊的設定被覆蓋，載入新的預設值
-    const STORAGE_KEY_CHANNELS = 'hkNewsChannels_v3';
-    const STORAGE_KEY_LAYOUT = 'hkNewsLayout_v3';
+    // 版本升級到 v4，確保你的新預設值會生效
+    const STORAGE_KEY_CHANNELS = 'hkNewsChannels_v4';
+    const STORAGE_KEY_LAYOUT = 'hkNewsLayout_v4';
 
     window.onload = function() {
         loadSettings();
@@ -259,7 +269,7 @@
         if (saved) {
             myChannels = JSON.parse(saved);
         } else {
-            // 如果沒有 v3 的紀錄，直接載入新的 Default
+            // 如果沒有 v4 紀錄，載入新的預設值
             myChannels = JSON.parse(JSON.stringify(defaultChannels));
         }
 
@@ -314,14 +324,28 @@
     window.addEventListener('resize', renderGrid);
 
     function openSettings() {
+        renderSettingsList(myChannels); // 使用目前的設定渲染列表
+        document.getElementById('settingsModal').style.display = 'flex';
+    }
+
+    // 渲染設定列表的輔助函數
+    function renderSettingsList(channels) {
         const listDiv = document.getElementById('channels-list');
         listDiv.innerHTML = '';
-        myChannels.forEach((ch) => addSettingRow(ch.name, ch.url));
-        document.getElementById('settingsModal').style.display = 'flex';
+        channels.forEach((ch) => addSettingRow(ch.name, ch.url));
     }
 
     function closeSettings() {
         document.getElementById('settingsModal').style.display = 'none';
+    }
+
+    // 功能：恢復預設值
+    function restoreDefaults() {
+        if (confirm("確定要刪除目前的設定，並恢復成預設的 4 個頻道嗎？")) {
+            // 複製一份預設值，避免直接修改原始參照
+            const newDefaults = JSON.parse(JSON.stringify(defaultChannels));
+            renderSettingsList(newDefaults);
+        }
     }
 
     function addSettingRow(name = '', url = '') {
